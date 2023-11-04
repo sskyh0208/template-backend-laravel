@@ -1,20 +1,21 @@
-FROM php:8.2-fpm
+FROM php:8.2-fpm-bullseye
+
+ENV TZ Asia/Tokyo
 
 WORKDIR /var/www/html
+
+RUN groupadd -r nginx && useradd -r -g nginx nginx
 
 COPY ./src /var/www/html
 COPY ./dockerfile/php/bin /usr/local/bin
 COPY ./dockerfile/php/config/php.ini /usr/local/etc/php/php.ini
+COPY ./dockerfile/php/config/zzz-docker.conf /usr/local/etc/php-fpm.d/zzz-docker.conf
 
-RUN apt update
-RUN apt install -y \
-    git \
-    zip \
-    unzip \
-    vim && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+	apt-get install -y git unzip libzip-dev libicu-dev libonig-dev && \
+    rm -rf /var/lib/apt/lists/* 
 
-RUN docker-php-ext-install pdo_mysql mysqli
+RUN docker-php-ext-install intl pdo_mysql zip bcmath mysqli
 RUN curl -sS http://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 ENV NODE_VERSION=20.9.0

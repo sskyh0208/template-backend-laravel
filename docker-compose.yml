@@ -12,9 +12,6 @@ services:
       - type: volume
         source: php-fpm-socket
         target: /var/run/php-fpm
-      - type: bind
-        source: ./src
-        target: /var/www/html
     environment:
       - DB_CONNECTION=mysql
       - DB_HOST=db
@@ -22,6 +19,7 @@ services:
       - DB_DATABASE=${DB_NAME:-backend_local}
       - DB_USERNAME=${DB_USER:-backend}
       - DB_PASSWORD=${DB_PASS:-passwd}
+    command: sh /usr/local/bin/init.sh
     depends_on:
       - db
   nginx:
@@ -38,9 +36,6 @@ services:
       - type: volume
         source: php-fpm-socket
         target: /var/run/php-fpm
-      - type: bind
-        source: ./src
-        target: /var/www/html
     depends_on:
       - app
   db:
