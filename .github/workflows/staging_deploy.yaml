@@ -84,7 +84,8 @@ jobs:
       - name: Fetch TaskDefinition from ECS and generate new task definition
         run: |
           aws ecs describe-task-definition --task-definition ${{ env.TASK_DEFINITION_NAME }} | \
-            jq '.taskDefinition | del (.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities)' > ${{ env.TASK_DEFINITION_NAME }}.json
+            jq '.taskDefinition | del (.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' > ${{ env.TASK_DEFINITION_NAME }}.json
+          cat ${{ env.TASK_DEFINITION_NAME }}.json
 
       # TaskDefinition の image を push した最新のものに書き換える
       - name: Render TaskDefinition
