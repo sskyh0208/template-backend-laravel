@@ -1,0 +1,118 @@
+name: staging deploy for ec2
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'If run flow staging deploy, input "staging".'
+        required: true
+        default: ''
+  pull_request:
+    branches:
+      - develop
+    types: [closed]
+
+env:
+  HOME_DIR: .
+  SRC_DIR: ./src
+  AWS_REGION: ${{ secrets.STG_AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.STG_AWS_ACCOUNT_ID }}
+  AWS_ECR_DOMAIN: ${{ env.AWS_ACCOUNT_ID }}dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+
+  # Nginx
+  NGINX_CONTAINER_NAME: nginx
+  NGINX_DOKCER_FILE: ./.dcoker/nginx/Dockerfile
+  NGINX_ECR_REPOSITORY: ${{ env.AWS_ECR_DOMAIN }}/${{ secrets.STG_NGINX_ECR_REPOSITORY_NAME }}
+  # PHP
+  PHP_CONTAINER_NAME: php
+  PHP_DOKCER_FILE: ./.dcoker/php/Dockerfile
+  PHP_ECR_REPOSITORY: ${{ env.AWS_ECR_DOMAIN }}/${{ secrets.STG_PHP_ECR_REPOSITORY_NAME }}
+
+  TASK_DEFINITION_NAME: ${{ secrets.STG_TASK_DEFINITION_NAME }}
+
+  PARAMETER_STORE_ENV_FILE_NAME: ${{ secrets.STG_AWS_PARAMETER_STORE_ENV_FILE_NAME }}
+
+  IAM_ROLE_ARN: ${{ secrets.STG_AWS_IAM_ROLE_GITHUBACTIONS_ARN}}
+  SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+  SLACK_USERNAME: GitHub Actions
+  SLACK_SUCCESS_MESSAGE: "fargate-stg-web-deploy-success"
+  SLACK_FAILURE_MESSAGE: "fargate-stg-web-deploy-failure"
+
+jobs:
+  ecs_deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      # 入力値チェック
+      - name: target validate
+        if: ${{ github.event_name != 'pull_request' && github.event.inputs.env != 'staging' }}
+        run: exit 1
+      
+      # BranchをCheckout
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # ODICによるAWS認証
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-northeast-1
+          role-to-assume: ${{ env.IAM_ROLE_ARN }}
+          role-session-name: GitHubActions-${{ github.run_id }}
+
+      # ECRログイン
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # DockerイメージをビルドしてECRにプッシュ
+      - name: Docker image build and push to Amazon ECR
+        id: build-image
+        env:
+          AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.PHP_ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f ${{ env.PHP_DOKCER_FILE }} --build-arg AWS_ACCOUNT_ID="$AWS_ACCOUNT_ID" --build-arg IMAGE_TAG=$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Fetch TaskDefinition from ECS and generate ${{ env.TASK_DEFINITION_NAME }}
+        run: |
+          aws ecs describe-task-definition --task-definition ${{ env.TASK_DEFINITION_NAME }} | \
+            jq '.taskDefinition | del (.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities)' > ${{ env.TASK_DEFINITION_NAME }}.json
+
+      # TaskDefinition の image を push した最新のものに書き換える
+      - name: Render TaskDefinition
+        id: render-container-api
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.TASK_DEFINITION_NAME }}.json
+          container-name: ${{ env.PHP_CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      # デプロイする
+      - name: Deploy app with CodeDeploy Blue/Green deployment
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-container-api.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER_NAME }}
+          service: ${{ env.ECS_SERVICE_NAME }}
+      
+      # Slack通知
+      - name: Slack notification on success
+        if: ${{ success() }}
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_COLOR: good
+          SLACK_MESSAGE: ${{ env.SLACK_SUCCESS_MESSAGE }}
+
+      - name: Slack notification on failure
+        if: ${{ failure() }}
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_COLOR: danger
+          SLACK_MESSAGE: ${{ env.SLACK_FAILURE_MESSAGE }}
