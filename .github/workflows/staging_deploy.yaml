@@ -73,12 +73,12 @@ jobs:
         working-directory: ${{ env.BASE_DIR }}
         env:
           AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
-          # ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ env.PHP_ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          pwd
-          ls -la
+          echo ECR_REGISTRY: $ECR_REGISTRY
+          echo ECR_REPOSITORY: $ECR_REPOSITORY
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG -f ${{ env.PHP_DOKCER_FILE }} --build-arg AWS_ACCOUNT_ID="$AWS_ACCOUNT_ID" --build-arg IMAGE_TAG=$IMAGE_TAG .
           docker push $ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
