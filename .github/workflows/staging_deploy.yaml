@@ -18,6 +18,9 @@ env:
   AWS_REGION: ${{ secrets.STG_AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ secrets.STG_AWS_ACCOUNT_ID }}
 
+  ECS_CLUSTER_NAME: ${{ secrets.STG_ECS_CLUSTER_NAME }}
+  ECS_SERVICE_NAME: ${{ secrets.STG_ECS_SERVICE_NAME }}
+
   # Nginx
   NGINX_CONTAINER_NAME: nginx
   NGINX_DOKCER_FILE: dockerfile/nginx/Dockerfile
