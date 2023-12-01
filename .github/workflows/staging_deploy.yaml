@@ -21,6 +21,8 @@ env:
   ECS_CLUSTER_NAME: ${{ secrets.STG_ECS_CLUSTER_NAME }}
   ECS_SERVICE_NAME: ${{ secrets.STG_ECS_SERVICE_NAME }}
 
+  APPSPEC_FILE: ./.github/appspec.yaml
+
   # Nginx
   NGINX_CONTAINER_NAME: nginx
   NGINX_DOKCER_FILE: dockerfile/nginx/Dockerfile
@@ -106,6 +108,7 @@ jobs:
           task-definition: ${{ steps.render-container-api.outputs.task-definition }}
           cluster: ${{ env.ECS_CLUSTER_NAME }}
           service: ${{ env.ECS_SERVICE_NAME }}
+          codedeploy-appspec: ${{ env.APPSPEC_FILE }}
           codedeploy-application: AppECS-${{ env.ECS_CLUSTER_NAME }}
           codedeploy-deployment-group: DgpECS-${{ env.ECS_SERVICE_NAME }}
       
