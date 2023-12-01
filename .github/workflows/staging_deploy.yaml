@@ -66,6 +66,24 @@ jobs:
           role-to-assume: ${{ env.IAM_ROLE_ARN }}
           role-session-name: GitHubActions-${{ github.run_id }}
 
+      - name: Cache vendor
+        id: cache
+        uses: actions/cache@v3
+        with:
+          ref: main
+          path: ./vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      # 依存関係のインストール
+      - name: Install dependencies
+        working-directory: ${{ env.SRC_DIR }}
+        if: steps.cache.outputs.cache-hit != 'true'
+        run:
+          cp .env.example .env
+          composer install --prefer-dist --no-interaction --optimize-autoloader
+
       # ECRログイン
       - name: Login to Amazon ECR
         id: login-ecr
