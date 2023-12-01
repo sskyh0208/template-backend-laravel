@@ -70,6 +70,7 @@ jobs:
       # DockerイメージをビルドしてECRにプッシュ
       - name: Docker image build and push to Amazon ECR
         id: build-image
+        working-directory: ${{ env.BASE_DIR }}
         env:
           AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -89,6 +90,7 @@ jobs:
       - name: Render TaskDefinition
         id: render-container-api
         uses: aws-actions/amazon-ecs-render-task-definition@v1
+        working-directory: ${{ env.BASE_DIR }}
         with:
           task-definition: ${{ env.TASK_DEFINITION_NAME }}.json
           container-name: ${{ env.PHP_CONTAINER_NAME }}
@@ -97,6 +99,7 @@ jobs:
       # デプロイする
       - name: Deploy app with CodeDeploy Blue/Green deployment
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        working-directory: ${{ env.BASE_DIR }}
         with:
           task-definition: ${{ steps.render-container-api.outputs.task-definition }}
           cluster: ${{ env.ECS_CLUSTER_NAME }}
