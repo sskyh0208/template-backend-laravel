@@ -106,6 +106,8 @@ jobs:
           task-definition: ${{ steps.render-container-api.outputs.task-definition }}
           cluster: ${{ env.ECS_CLUSTER_NAME }}
           service: ${{ env.ECS_SERVICE_NAME }}
+          codedeploy-application: AppECS-${{ env.ECS_CLUSTER_NAME }}
+          codedeploy-deployment-group: DgpECS-${{ env.ECS_SERVICE_NAME }}
       
       # Slack通知
       - name: Slack notification on success
