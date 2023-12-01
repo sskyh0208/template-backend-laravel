@@ -1,4 +1,4 @@
-name: staging deploy for ec2
+name: staging deploy for ecs
 
 on:
   workflow_dispatch:
@@ -17,16 +17,16 @@ env:
   SRC_DIR: ./src
   AWS_REGION: ${{ secrets.STG_AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ secrets.STG_AWS_ACCOUNT_ID }}
-  AWS_ECR_DOMAIN: ${{ env.AWS_ACCOUNT_ID }}dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+  AWS_ECR_DOMAIN: ${{ secrets.STG_AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.STG_AWS_REGION }}.amazonaws.com
 
   # Nginx
   NGINX_CONTAINER_NAME: nginx
   NGINX_DOKCER_FILE: ./.dcoker/nginx/Dockerfile
-  NGINX_ECR_REPOSITORY: ${{ env.AWS_ECR_DOMAIN }}/${{ secrets.STG_NGINX_ECR_REPOSITORY_NAME }}
+  NGINX_ECR_REPOSITORY: ${{ secrets.STG_AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.STG_AWS_REGION }}.amazonaws.com/${{ secrets.STG_NGINX_ECR_REPOSITORY_NAME }}
   # PHP
   PHP_CONTAINER_NAME: php
   PHP_DOKCER_FILE: ./.dcoker/php/Dockerfile
-  PHP_ECR_REPOSITORY: ${{ env.AWS_ECR_DOMAIN }}/${{ secrets.STG_PHP_ECR_REPOSITORY_NAME }}
+  PHP_ECR_REPOSITORY: ${{ secrets.STG_AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.STG_AWS_REGION }}.amazonaws.com/${{ secrets.STG_PHP_ECR_REPOSITORY_NAME }}
 
   TASK_DEFINITION_NAME: ${{ secrets.STG_TASK_DEFINITION_NAME }}
 
