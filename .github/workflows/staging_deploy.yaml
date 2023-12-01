@@ -80,7 +80,7 @@ jobs:
       - name: Install dependencies
         working-directory: ${{ env.SRC_DIR }}
         if: steps.cache.outputs.cache-hit != 'true'
-        run:
+        run: |
           cp .env.example .env
           composer install --prefer-dist --no-interaction --optimize-autoloader
 
